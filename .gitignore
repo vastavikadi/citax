@@ -1,0 +1,16 @@
+dataset/
+__pycache__/
+.env
+venv/
+*.pyc
+*.pyo
+*.sqlite
+ci_policy.json
+full_policy.json
+rl_policy.json
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+*.log

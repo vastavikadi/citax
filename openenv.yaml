@@ -1,0 +1,21 @@
+name: Citation-Agent
+version: 1.0.0
+description: "A real-world academic writing task where an agent must select correct citations based on claims."
+
+environment:
+  python_module: environment
+  class_name: CitationEnv
+
+tasks:
+  - id: T001
+    name: "Easy Citation"
+    kwargs:
+      task_id: "T001"
+  - id: T002
+    name: "Medium Citation"
+    kwargs:
+      task_id: "T002"
+  - id: T003
+    name: "Hard Citation"
+    kwargs:
+      task_id: "T003"

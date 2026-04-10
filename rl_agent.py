@@ -87,13 +87,24 @@ class QLearningCitationAgent:
         shorter_query = " ".join(tokens[:6]) if tokens else title
         broader_query = " ".join(tokens[:3]) if tokens else title
 
-        candidates: List[Action] = [
-            Action(action_type="search", query=title),
-            Action(action_type="search", query=shorter_query),
-            Action(action_type="search", query=broader_query),
-        ]
+        candidates: List[Action] = []
 
         results = obs.search_results or []
+        confident_match = False
+        if results:
+            top_title = results[0].get("title", "")
+            confident_match = self._overlap_score(title, top_title) >= 0.95
+
+        # Only keep searching when we still need discovery.
+        if (not results) or (not confident_match) or (difficulty == "hard" and not obs.citations_data):
+            candidates.extend(
+                [
+                    Action(action_type="search", query=title),
+                    Action(action_type="search", query=shorter_query),
+                    Action(action_type="search", query=broader_query),
+                ]
+            )
+
         if results:
             ranked = sorted(
                 results,
@@ -123,12 +134,16 @@ class QLearningCitationAgent:
     def _initial_q(self, obs: Observation, action: Action) -> float:
         action_type = action.action_type
         if action_type == "search":
-            return 0.08
+            return 0.08 if not obs.search_results else -0.04
         if action_type in {"read_abstract", "get_citations"}:
             return 0.06 if obs.search_results else -0.02
         if action_type == "submit":
             has_evidence = bool(obs.last_abstract or obs.citations_data)
-            return 0.02 if has_evidence else -0.08
+            if has_evidence:
+                return 0.10
+            if obs.search_results:
+                return 0.06
+            return -0.08
         return -0.10
 
     def _pick_action(self, obs: Observation, greedy: bool = False) -> Action:

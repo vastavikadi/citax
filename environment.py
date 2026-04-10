@@ -30,6 +30,8 @@ class CitationEnv:
         self.max_steps = 15
         self.state_history = []
         self._current_obs = None
+        self._last_search_query = ""
+        self._last_search_signature = ""
         
         db_path = 'citation_db.sqlite'
         if not os.path.exists(db_path):
@@ -47,6 +49,8 @@ class CitationEnv:
     def reset(self) -> Observation:
         self.step_count = 0
         self.state_history = []
+        self._last_search_query = ""
+        self._last_search_signature = ""
         self._current_obs = Observation(
             current_claim=self.task.claim,
             message="Environment initialized. Please search for papers using the SQLite dataset."
@@ -103,6 +107,14 @@ class CitationEnv:
                 results.append({"corpus_id": str(row[0]), "arxiv_id": str(row[1]), "title": row[2], "year": str(row[3])})
             search_results = results
             message = f"Found {len(results)} papers."
+
+            signature = "|".join((r.get("corpus_id") or "") for r in results)
+            repeated_noop = (
+                bool(results)
+                and q.strip().lower() == self._last_search_query
+                and signature == self._last_search_signature
+            )
+
             if results:
                 q_norm = q.strip().lower()
                 best_title = (results[0].get("title") or "").strip().lower()
@@ -110,8 +122,16 @@ class CitationEnv:
                     reward_value += 0.18
                 else:
                     reward_value += 0.08
+
+                # Discourage repeated searches that do not add new information.
+                if repeated_noop:
+                    reward_value -= 0.22
+                    message = f"Found {len(results)} papers. Repeated no-op search detected."
             else:
                 reward_value -= 0.12
+
+            self._last_search_query = q.strip().lower()
+            self._last_search_signature = signature
             
         elif action.action_type == "read_abstract":
             pid = action.paper_id

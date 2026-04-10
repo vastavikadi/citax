@@ -9,7 +9,7 @@ from rl_agent import QLearningCitationAgent
 from tasks import TASKS
 
 
-CHECKPOINT_PATH = "rl_policy.json"
+CHECKPOINT_PATH = "full_policy.json"
 _cached_agent: QLearningCitationAgent | None = None
 
 
@@ -27,21 +27,20 @@ def _load_or_train_agent(
     if _cached_agent is not None:
         return _cached_agent, "Loaded in-memory policy."
 
-    if load_checkpoint and os.path.exists(checkpoint_path) and not force_retrain:
-        _cached_agent = QLearningCitationAgent.load(checkpoint_path)
-        return _cached_agent, f"Loaded checkpoint from {checkpoint_path}."
+    if load_checkpoint:
+        candidate_paths = [checkpoint_path]
+        if checkpoint_path != CHECKPOINT_PATH:
+            candidate_paths.append(CHECKPOINT_PATH)
 
-    agent = QLearningCitationAgent()
-    task_ids = [task.id for task in TASKS]
-    if ci_fast:
-        task_ids = [task.id for task in TASKS[:12]]
-    stats = agent.train_on_tasks(task_ids=task_ids, episodes_per_task=episodes_per_task)
-    agent.save(checkpoint_path)
-    _cached_agent = agent
-    return (
-        _cached_agent,
-        f"Trained new policy. episodes={stats.episodes}, avg_reward={stats.average_reward:.4f}, solved_rate={stats.solved_rate:.4f}, checkpoint={checkpoint_path}",
-    )
+        for candidate_path in candidate_paths:
+            if os.path.exists(candidate_path) and not force_retrain:
+                _cached_agent = QLearningCitationAgent.load(candidate_path)
+                return _cached_agent, f"Loaded checkpoint from {candidate_path}."
+
+    # Avoid long live training in the Space request path. If no checkpoint is available,
+    # return the heuristic policy immediately so the UI stays responsive.
+    _cached_agent = QLearningCitationAgent()
+    return _cached_agent, "Using untrained heuristic policy because no checkpoint was available."
 
 
 def run_task(
@@ -103,6 +102,7 @@ def run_agent(user_input: str) -> str:
 def _build_ui() -> gr.Blocks:
     with gr.Blocks(title="Citation RL Agent") as demo:
         gr.Markdown("# Citation RL Agent\nTrain/evaluate a reinforcement-learning citation policy with hybrid scoring.")
+        gr.Markdown("The Space loads a bundled pretrained policy by default so results appear immediately.")
 
         with gr.Row():
             task_dropdown = gr.Dropdown(

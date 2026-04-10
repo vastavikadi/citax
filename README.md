@@ -90,6 +90,8 @@ Most agent benchmarks focus on web scraping or bash terminal navigation. This en
    ```
    Then open `http://localhost:7860`.
 
+   The Space uses `full_policy.json` by default so it should return a result immediately instead of training on the first click.
+
 ### Option 2: Running via Docker (Hugging Face Spaces validation)
 
 To test if your environment works with the automated Hugging Face Spaces pipeline:

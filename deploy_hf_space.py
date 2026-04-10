@@ -33,10 +33,18 @@ def deploy(space_id: str, token: str, private: bool) -> None:
             "*.pyo",
             ".env",
             "ci_policy.json",
-            "full_policy.json",
             "rl_policy.json",
         ],
     )
+
+    policy_path = root / "full_policy.json"
+    if policy_path.exists():
+        api.upload_file(
+            path_or_fileobj=str(policy_path),
+            path_in_repo="full_policy.json",
+            repo_id=space_id,
+            repo_type="space",
+        )
 
     print(f"Deployment upload complete: https://huggingface.co/spaces/{space_id}")
 

@@ -6,7 +6,6 @@ venv/
 *.pyo
 *.sqlite
 ci_policy.json
-full_policy.json
 rl_policy.json
 .cache/
 .pytest_cache/

@@ -12,5 +12,5 @@ COPY . .
 
 EXPOSE 7860
 
-# Run Hugging Face Space entrypoint
-CMD ["python", "hf_entry.py"]
+# Run the OpenEnv HTTP API expected by the evaluator.
+CMD ["python", "openenv_entry.py"]

@@ -24,8 +24,8 @@ class Reward(BaseModel):
 
 class CitationEnv:
     def __init__(self, task_id: str = "T001"):
-        self.task = next((t for t in tasks.TASKS if t.id == task_id), tasks.TASKS[0])
-        self.grader = tasks.Grader(self.task)
+        self.task = None
+        self.grader = None
         self.step_count = 0
         self.max_steps = 15
         self.state_history = []
@@ -45,8 +45,20 @@ class CitationEnv:
                 print(f"WARNING: Could not download DB: {e}")
                 
         self.db = sqlite3.connect(db_path)
+        self._set_task(task_id)
+
+    def _set_task(self, task_id: Optional[str]) -> None:
+        chosen = next((t for t in tasks.TASKS if t.id == task_id), tasks.TASKS[0])
+        self.task = chosen
+        self.grader = tasks.Grader(self.task)
         
-    def reset(self) -> Observation:
+    def reset(self, task_id: Optional[str] = None, **kwargs: Any) -> Observation:
+        # OpenEnv runners may pass task kwargs via reset(); accept both direct
+        # task_id and keyword-based variants to avoid signature mismatch failures.
+        chosen_task_id = task_id or kwargs.get("task_id") or kwargs.get("id")
+        if chosen_task_id:
+            self._set_task(str(chosen_task_id))
+
         self.step_count = 0
         self.state_history = []
         self._last_search_query = ""
@@ -63,7 +75,10 @@ class CitationEnv:
             return self.reset()
         return self._current_obs
 
-    def step(self, action: Action) -> Tuple[Observation, Reward, bool, dict]:
+    def step(self, action: Union[Action, Dict[str, Any]]) -> Tuple[Observation, Reward, bool, dict]:
+        if not isinstance(action, Action):
+            action = Action.model_validate(action)
+
         self.step_count += 1
         done = False
         info = {"task": self.task.id}
